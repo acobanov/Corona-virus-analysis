@@ -2,7 +2,9 @@
 title: "Corona virus analysis"
 author: "Ante Cobanov"
 date: "3/31/2020"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
