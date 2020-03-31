@@ -1,0 +1,126 @@
+---
+title: "Corona virus analysis"
+author: "Ante Cobanov"
+date: "3/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+### Start
+
+Clear variables and close windows 
+
+```{r a1, echo=TRUE}
+graphics.off()
+rm(list = ls(all=TRUE))
+```
+
+### Loading packages
+
+```{r a2, echo=TRUE,results='hide', message=FALSE, warning=FALSE}
+# packages
+packages = c("tidyverse","coronavirus","purrr","eurostat","httr",
+             "jsonlite","kableExtra","curl","jsonlite")
+# install missing packages
+lapply(packages, function(x) if (!(x %in% installed.packages())) {install.packages(x)})
+#add packages
+lapply(packages, library, quietly = TRUE, character.only = TRUE)
+```
+
+### Getting the data from GitHub 
+#### variable <data> is a named list (name: country name, list element: data.frame)
+#### date.frame columns are: date, confirmed, deaths, recovered
+
+```{r}
+data <- fromJSON("https://pomber.github.io/covid19/timeseries.json")
+# glimpse(data)
+tail(data[['Croatia']])
+```
+
+##### Create vector of EU countries names and vector of Croatian neigbours countries names 
+
+```{r}
+eu_countries <- c("Austria","Belgium","Bulgaria","Croatia","Cyprus","Czechia","Denmark","Estonia","Finland",
+                  "France","Germany","Greece","Hungary","Ireland","Italy","Latvia","Lithuania","Luxembourg",
+                  "Malta","Netherlands","Poland","Portugal","Romania","Slovakia","Slovenia","Spain","Sweden")
+
+croatia_neighbours <-c("Italy","Slovenia","Serbia","Bosnia and Herzegovina","Hungary","Montenegro","Croatia")
+
+countries <- names(data)
+```
+
+##### create named list (dfs_eu) of EU countries data frames 
+
+```{r}
+dfs_eu <- purrr::map(eu_countries,function(x) data[[x]] %>%  mutate(country=x))
+names(dfs_eu) <- eu_countries
+tail(dfs_eu[["Italy"]])
+```
+
+##### create long data frame (df_eu_long) from list of data frames
+
+```{r}
+df_eu_long <- bind_rows(dfs_eu)
+countries1 <- df_eu_long %>% 
+  select(country) %>% 
+  distinct() %>%
+  pull(country)
+countries1[1:10]
+```
+
+##### create wide data frame for CONFIRMED cases
+
+```{r}
+# confirmed data frame
+df_eu_wide_conf <- df_eu_long %>% 
+  select(date,country,confirmed) %>% 
+  pivot_wider(names_from=country,values_from=confirmed)
+tail(df_eu_wide_conf)
+```
+
+##### create wide data frame for DEATHS
+
+```{r}
+# deaths data frame
+df_eu_wide_deaths <- df_eu_long %>% 
+  select(date,country,deaths) %>% 
+  pivot_wider(names_from=country,values_from=deaths)
+tail(df_eu_wide_deaths)
+```
+
+##### create wide data frame for RECOVERED cases
+
+```{r}
+# recovered data frame
+df_eu_wide_recov <- df_eu_long %>% 
+  select(date,country,recovered) %>% 
+  pivot_wider(names_from=country,values_from=recovered)
+tail(df_eu_wide_recov)
+```
+
+##### calculate wide data frame for NEW cases
+
+```{r}
+# calculation of new cases
+df_eu_wide_new <- df_eu_wide_conf %>% 
+  select(-c(date)) %>% 
+  map(.,function(x) x-dplyr::lag(x)) %>% 
+  bind_cols()
+tail(df_eu_wide_new)
+```
+
+
+```{r}
+
+df <- df_eu_long %>% 
+  filter(country %in% c('Croatia','Slovenia'))
+
+
+
+```
+
+
